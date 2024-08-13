@@ -1,0 +1,360 @@
+(Test.js)
+
+
+import React, { Component } from 'react'
+
+ class Test extends Component {
+  constructor(props){
+    super(props);
+    this.state ={
+      a:10
+    }
+    console.log("constructor");
+  }
+  componentDidMount = () => {
+    console.log("componentDidMount"); 
+    //Api istekleri 
+    this.setState({
+      a:20
+    })
+
+  }
+  componentDidUpdate = (prevProps, prevState) => {
+    console.log("Component Did Update");
+  }
+  shouldComponentUpdate(){
+    console.log("Should Component Update");
+    return true;
+  }
+  
+  
+  render() {
+    console.log("Render");
+    return (
+      <div>
+        
+      </div>
+    )
+  }
+}
+export default Test;
+
+
+
+(user.js)
+
+
+
+import React, { Component } from 'react';
+import PropTypes from 'prop-types';
+import UserConsumer from '../context';
+import axios from 'axios';
+
+
+class User extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      isVisible : true 
+    };
+  }
+  onClickEvent =(e) => {
+    console.log(this);
+    this.setState({
+     isVisible : !this.state.isVisible
+  }
+  )
+  }
+
+  onDeleteUser = async (dispatch,e) => {
+    const {id} = this.props;
+    // delete request
+     await axios.delete(`http://localhost:3004/users/${id}`);
+    // Consumer dispatch
+    dispatch ({type : "DELETE_USER",payload:id});
+
+  }
+  componentWillUnmount(){
+    console.log("Component Will Unmount");
+  }
+  static defaultProps = {
+    name: "bilgi yok",
+    salary: "bilgi yok",
+    department: "bilgi yok",
+    id:"bilgi yok"
+  };
+  static propTypes = {
+    name: PropTypes.string.isRequired,
+    salary: PropTypes.string.isRequired,
+    department: PropTypes.string.isRequired,
+    id: PropTypes.string.isRequired
+    
+  };
+  render() {
+    // destructuring
+    const { name, department, salary } = this.props;
+    const {isVisible} = this.state
+    return (<UserConsumer>
+      {
+        value => {
+          const {dispatch} = value;
+          return (
+            <div className='col-md-8 mb-4'>
+            <div className='card' style={isVisible ?{backgroundColor : "#c4ccbf"} : null}> 
+              <div className='card-hearder d-flex justify-content-between'>
+                <h4 className='d-inline'onClick={this.onClickEvent}>{name}</h4>
+                <i onClick={this.onDeleteUser.bind(this,dispatch)} className='far fa-trash-alt' style={{cursor : "pointer"}}></i>
+              </div>
+              <hr/>
+              {
+                isVisible ? (<div className='card-body'>
+                <p className='card-text'> maaş : {salary} </p>
+                <p className='card-text'> departman : {department} </p>
+                </div>) : null
+              }
+            </div>
+            </div>
+          );
+        }
+      }
+
+    </UserConsumer>)
+  }
+}
+
+export default User;
+
+
+(AddUser.js)
+
+
+
+import React, { Component } from 'react';
+import posed from 'react-pose';
+import UserConsumer from '../context';
+import axios from 'axios';
+
+
+const Animation = posed.div({
+  visible: {
+    opacity: 1,
+    applyAtStart: {
+      display: 'block'
+    }
+  },
+  hidden: {
+    opacity: 0,
+    applyAtEnd: {
+      display: 'none'
+    }
+  }
+});
+
+class AddUser extends Component {
+  state = {
+    visible: true,
+    name: "",
+    department: "",
+    salary: ""
+  };
+
+  changeVisibility = () => {
+    this.setState({
+      visible: !this.state.visible
+    });
+  };
+
+  changeInput = (e) => {
+    this.setState({
+      [e.target.name]: e.target.value
+    });
+  };
+
+  addUser = async (dispatch, e) => {
+    e.preventDefault();
+    const { name, department, salary } = this.state; 
+
+    const newUser = {
+      
+      name: name,
+      salary: salary,
+      department: department
+    };
+    const response = await axios.post ("http://localhost:3004/users",newUser);
+
+    dispatch({ type: "ADD_USER", payload: response.data });
+
+    // Formu temizle
+    this.setState({
+      name: "",
+      department: "",
+      salary: ""
+    });
+  };
+
+  render() {
+    const { visible, name, department, salary } = this.state;
+    return (
+      <UserConsumer>
+        {
+          value => {
+            const { dispatch } = value;
+            return (
+              <div className="col-md-8 mb-4">
+                <button onClick={this.changeVisibility} className="btn btn-dark btn-block mb-2">
+                  {visible ? 'Hide Form' : 'Show Form'}
+                </button>
+                <Animation pose={visible ? 'visible' : 'hidden'}>
+                  <div className="card">
+                    <div className="card-header">
+                      <h4>Kişi Ekle</h4>
+                    </div>
+                    <div className="card-body">
+                      <form onSubmit={this.addUser.bind(this, dispatch)}>
+                        <div className="form-group">
+                          <label htmlFor="name">Name</label>
+                          <input
+                            type="text"
+                            name="name"
+                            id="name"
+                            placeholder="İsim girin"
+                            className="form-control"
+                            value={name}
+                            onChange={this.changeInput}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label htmlFor="department">Department</label>
+                          <input
+                            type="text"
+                            name="department"
+                            id="department"
+                            placeholder="Departman giriniz"
+                            className="form-control"
+                            value={department}
+                            onChange={this.changeInput}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label htmlFor="salary">Salary</label>
+                          <input
+                            type="text"
+                            name="salary"
+                            id="salary"
+                            placeholder="Maaş girin"
+                            className="form-control"
+                            value={salary}
+                            onChange={this.changeInput}
+                          />
+                        </div>
+                        <button className="btn btn-danger btn-block" type="submit">
+                          Kişiyi Ekle
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                </Animation>
+              </div>
+            );
+          }
+        }
+      </UserConsumer>
+    );
+  }
+}
+
+export default AddUser;
+
+
+
+
+(context.js)
+
+
+import React, { Component } from 'react';
+import axios from 'axios';
+const UserContext = React.createContext();
+// provider , consumer
+const reducer = (state, action) => {
+  switch (action.type) {
+    case "DELETE_USER":
+      return {
+        ...state,
+        users: state.users.filter(user => action.payload !== user.id)
+      };
+    case "ADD_USER":
+      return {
+        ...state,
+        users: [...state.users, action.payload]
+      };
+    default:
+      return state;
+  }
+};
+
+export class UserProvider extends Component {
+  state = {
+    users: [],
+    dispatch: action => {
+      this.setState(state => reducer(state, action));
+    }
+  };
+  componentDidMount = async () => {
+    const response = await axios.get("http://localhost:3004/users");
+    this.setState({
+      users:response.data
+    })
+  }
+  
+
+  render() {
+    return (
+      <UserContext.Provider value={this.state}>
+        {this.props.children}
+      </UserContext.Provider>
+    );
+  }
+}
+
+const UserConsumer = UserContext.Consumer;
+export default UserConsumer;
+
+
+
+(db.json)
+
+
+{
+  "users": [
+    {
+      "name": "yaren soysal",
+      "salary": "400.000",
+      "department": "arge",
+      "id": "lw81aMP"
+    },
+    {
+      "name": "Mahmut Soysal",
+      "salary": "700.000",
+      "department": "kuaför",
+      "id": "NYwYw2-"
+    },
+    {
+      "name": "Furkan taşdelen",
+      "salary": "300.000",
+      "department": "grafik animasyon",
+      "id": "0_Ng7pP"
+    },
+    {
+      "name": "abdi soysal",
+      "salary": "50.000",
+      "department": "hava yolları",
+      "id": "V7cqIUQ"
+    },
+    {
+      "name": "fatmanur kılıçkaya",
+      "salary": "1.000.000",
+      "department": "öğretim görevlisi",
+      "id": "xH0_cOB"
+    }
+  ]
+}
